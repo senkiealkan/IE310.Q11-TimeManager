@@ -433,7 +433,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
                          <div className="flex-1">
                             <label className="text-xs font-semibold text-slate-500 uppercase">Due</label>
                             {/* Changed outer DIV to LABEL for better click handling */}
-                            <label className="w-full mt-1 flex items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 relative cursor-pointer">
+                            <div className="w-full mt-1 flex items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 relative cursor-pointer">
                                 <Calendar size={14} />
                                 {formatDateForDisplay(editingTask.dueDate)}
                                 
@@ -446,7 +446,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
                                         if (e.target.value) setEditingTask(prev => prev ? ({ ...prev, dueDate: e.target.value }) : null);
                                     }}
                                 />
-                            </label>
+                            </div>
                          </div>
                     </div>
 
