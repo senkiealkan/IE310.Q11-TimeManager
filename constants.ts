@@ -1,3 +1,4 @@
+
 import { Task, AppUsage, DailyStats, UserGoal } from './types';
 
 export const INITIAL_TASKS: Task[] = [
@@ -8,10 +9,10 @@ export const INITIAL_TASKS: Task[] = [
 ];
 
 export const MOCK_USAGE: AppUsage[] = [
-  { name: 'Instagram', minutes: 45, icon: 'camera', color: '#E1306C' },
-  { name: 'TikTok', minutes: 80, icon: 'music', color: '#000000' },
-  { name: 'YouTube', minutes: 30, icon: 'video', color: '#FF0000' },
-  { name: 'WhatsApp', minutes: 15, icon: 'message-circle', color: '#25D366' },
+  { name: 'Instagram', minutes: 45, limit: 30, icon: 'camera', color: '#E1306C' },
+  { name: 'TikTok', minutes: 80, limit: 60, icon: 'music', color: '#000000' },
+  { name: 'YouTube', minutes: 30, limit: 90, icon: 'video', color: '#FF0000' },
+  { name: 'WhatsApp', minutes: 15, limit: 45, icon: 'message-circle', color: '#25D366' },
 ];
 
 export const WEEKLY_STATS: DailyStats[] = [

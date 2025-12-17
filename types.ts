@@ -1,3 +1,4 @@
+
 export interface Task {
   id: string;
   title: string;
@@ -18,6 +19,7 @@ export interface DailyStats {
 export interface AppUsage {
   name: string;
   minutes: number;
+  limit: number; // Daily limit in minutes
   icon: string;
   color: string;
 }
