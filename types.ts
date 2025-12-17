@@ -5,7 +5,7 @@ export interface Task {
   category: 'Study' | 'Personal' | 'Project' | 'Health';
   priority: 'High' | 'Medium' | 'Low';
   completed: boolean;
-  dueDate: string;
+  dueDate: string; // ISO Date String (YYYY-MM-DD)
   durationMinutes: number;
 }
 

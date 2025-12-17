@@ -1,9 +1,10 @@
 
 import React, { useState, useMemo } from 'react';
 import { 
-  Plus, Calendar, Clock, CheckCircle2, Circle, Tag, 
-  Trash2, Flag, MoreHorizontal, X, Save, AlertCircle, ChevronDown 
+  Plus, Calendar, CheckCircle2, Circle, Tag, 
+  Trash2, Flag, MoreHorizontal, X, Save, AlertCircle, ChevronDown, CalendarDays 
 } from 'lucide-react';
+import { format, isToday, isTomorrow, isPast, addDays, isValid, compareAsc } from 'date-fns';
 import { Task } from '../types';
 
 interface TaskListProps {
@@ -11,7 +12,17 @@ interface TaskListProps {
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
 }
 
-// Helper for Priority Colors
+// --- Helpers ---
+
+const parseLocalISO = (dateStr: string) => {
+  if (!dateStr) return new Date(NaN);
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+      return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+  return new Date(dateStr);
+};
+
 const getPriorityColor = (priority: string) => {
   switch (priority) {
     case 'High': return 'text-red-500 border-red-500 bg-red-50';
@@ -28,7 +39,16 @@ const getCheckboxColor = (priority: string) => {
       case 'Low': return 'text-blue-500';
       default: return 'text-slate-300';
     }
-  };
+};
+
+const formatDateForDisplay = (isoString: string) => {
+    const date = parseLocalISO(isoString);
+    if (!isValid(date)) return isoString;
+    if (isToday(date)) return 'Today';
+    if (isTomorrow(date)) return 'Tomorrow';
+    if (isPast(date) && !isToday(date)) return format(date, 'MMM d'); // Overdue shows date
+    return format(date, 'MMM d'); // Future dates
+};
 
 const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
   const [filter, setFilter] = useState<'All' | 'Study' | 'Personal' | 'Project' | 'Health'>('All');
@@ -40,12 +60,12 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
     title: string;
     priority: 'High' | 'Medium' | 'Low';
     category: 'Study' | 'Personal' | 'Project' | 'Health';
-    dueDate: string;
+    dueDate: string; // ISO YYYY-MM-DD
   }>({
     title: '',
     priority: 'Medium',
     category: 'Personal',
-    dueDate: 'Today'
+    dueDate: format(new Date(), 'yyyy-MM-dd')
   });
 
   // --- Actions ---
@@ -68,10 +88,10 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
         priority: newTaskData.priority,
         completed: false,
         dueDate: newTaskData.dueDate,
-        durationMinutes: 30 // Default
+        durationMinutes: 30
     };
     setTasks(prev => [newTask, ...prev]);
-    setNewTaskData({ ...newTaskData, title: '' }); // Reset title only
+    setNewTaskData({ ...newTaskData, title: '' }); // Reset title, keep other settings
     setIsAdding(false);
   };
 
@@ -82,7 +102,20 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
     }
   };
 
-  // --- Grouping Logic ---
+  // --- Date Logic Actions ---
+
+  const setDueDateQuick = (type: 'today' | 'tomorrow', isEditing = false) => {
+      const date = type === 'today' ? new Date() : addDays(new Date(), 1);
+      const iso = format(date, 'yyyy-MM-dd');
+      
+      if (isEditing && editingTask) {
+          setEditingTask({ ...editingTask, dueDate: iso });
+      } else {
+          setNewTaskData(prev => ({ ...prev, dueDate: iso }));
+      }
+  };
+
+  // --- Grouping Logic (Smart Dates) ---
 
   const filteredTasks = useMemo(() => {
       return filter === 'All' ? tasks : tasks.filter(t => t.category === filter);
@@ -102,16 +135,25 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
             return;
         }
 
-        // Mock Logic for "Overdue" - checking for "Yesterday" string or specific flag
-        // In a real app, compare Date objects.
-        if (task.dueDate.toLowerCase().includes('yesterday') || task.dueDate.toLowerCase().includes('overdue')) {
+        const date = parseLocalISO(task.dueDate);
+        
+        // Strict Check for Overdue: Past AND Not Today
+        if (isPast(date) && !isToday(date)) {
             groups.Overdue.push(task);
-        } else if (task.dueDate.toLowerCase() === 'today') {
+        } else if (isToday(date)) {
             groups.Today.push(task);
         } else {
             groups.Upcoming.push(task);
         }
     });
+
+    // Sort by Date (Nearest First)
+    const sorter = (a: Task, b: Task) => compareAsc(parseLocalISO(a.dueDate), parseLocalISO(b.dueDate));
+    
+    groups.Overdue.sort(sorter);
+    groups.Today.sort(sorter); // Usually all same date, but good practice
+    groups.Upcoming.sort(sorter);
+    groups.Completed.sort((a, b) => Number(b.id) - Number(a.id)); // Recently created/completed first
 
     return groups;
   }, [filteredTasks]);
@@ -120,42 +162,44 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
 
   // --- Render Components ---
 
-  const RenderTaskCard = ({ task, onClick }: { task: Task, onClick: () => void }) => (
-    <div 
-        onClick={onClick}
-        className="group bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all cursor-pointer flex items-center gap-3 mb-2"
-    >
-        <button 
-            onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }}
-            className={`transition-colors active:scale-90 ${getCheckboxColor(task.priority)}`}
+  const RenderTaskCard = ({ task, onClick }: { task: Task, onClick: () => void }) => {
+    const isOverdue = !task.completed && isPast(parseLocalISO(task.dueDate)) && !isToday(parseLocalISO(task.dueDate));
+    
+    return (
+        <div 
+            onClick={onClick}
+            className="group bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all cursor-pointer flex items-center gap-3 mb-2"
         >
-            {task.completed ? <CheckCircle2 size={22} className="text-slate-400" /> : <Circle size={22} />}
-        </button>
-        
-        <div className="flex-1 min-w-0">
-            <h3 className={`font-medium text-sm text-slate-800 truncate ${task.completed ? 'line-through text-slate-400' : ''}`}>
-                {task.title}
-            </h3>
-            <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-400">
-                <span className={`px-1.5 py-0.5 rounded ${getPriorityColor(task.priority)} bg-opacity-20 border-0`}>
-                    {task.priority}
-                </span>
-                <span className="flex items-center gap-1">
-                   <Tag size={10} /> {task.category}
-                </span>
-                {task.dueDate !== 'Today' && (
-                    <span className="flex items-center gap-1 text-slate-400">
-                        <Calendar size={10} /> {task.dueDate}
+            <button 
+                onClick={(e) => { e.stopPropagation(); toggleTask(task.id); }}
+                className={`transition-colors active:scale-90 ${getCheckboxColor(task.priority)}`}
+            >
+                {task.completed ? <CheckCircle2 size={22} className="text-slate-400" /> : <Circle size={22} />}
+            </button>
+            
+            <div className="flex-1 min-w-0">
+                <h3 className={`font-medium text-sm text-slate-800 truncate ${task.completed ? 'line-through text-slate-400' : ''}`}>
+                    {task.title}
+                </h3>
+                <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-400">
+                    <span className={`px-1.5 py-0.5 rounded ${getPriorityColor(task.priority)} bg-opacity-20 border-0`}>
+                        {task.priority}
                     </span>
-                )}
+                    <span className="flex items-center gap-1">
+                    <Tag size={10} /> {task.category}
+                    </span>
+                    <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-500 font-semibold' : ''}`}>
+                        <Calendar size={10} /> {formatDateForDisplay(task.dueDate)}
+                    </span>
+                </div>
             </div>
-        </div>
 
-        <button className="text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
-            <MoreHorizontal size={16} />
-        </button>
-    </div>
-  );
+            <button className="text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                <MoreHorizontal size={16} />
+            </button>
+        </div>
+    );
+  };
 
   return (
     <div className="flex-1 flex flex-col h-full relative">
@@ -224,14 +268,44 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
                             {newTaskData.priority}
                         </button>
 
-                        {/* Date Chip */}
-                        <button 
-                            onClick={() => setNewTaskData(prev => ({ ...prev, dueDate: prev.dueDate === 'Today' ? 'Tomorrow' : prev.dueDate === 'Tomorrow' ? 'Next Week' : 'Today' }))}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-slate-200 text-slate-600 hover:bg-slate-50"
-                        >
-                            <Calendar size={12} />
-                            {newTaskData.dueDate}
-                        </button>
+                        {/* Date Picker Group */}
+                        <div className="flex gap-1 bg-slate-50 rounded-lg p-0.5 border border-slate-100">
+                             <button 
+                                onClick={() => setDueDateQuick('today')}
+                                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${newTaskData.dueDate === format(new Date(), 'yyyy-MM-dd') ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+                             >
+                                Today
+                             </button>
+                             <button 
+                                onClick={() => setDueDateQuick('tomorrow')}
+                                className={`px-2 py-1 rounded-md text-xs font-medium transition-colors ${newTaskData.dueDate === format(addDays(new Date(), 1), 'yyyy-MM-dd') ? 'bg-white shadow-sm text-slate-800' : 'text-slate-500 hover:text-slate-700'}`}
+                             >
+                                Tmrw
+                             </button>
+                             
+                             {/* Custom Date Trigger - Changed to LABEL for click reliability */}
+                             <label className={`relative px-2 py-1 rounded-md text-xs font-medium flex items-center gap-1 transition-colors cursor-pointer ${
+                                    ![format(new Date(), 'yyyy-MM-dd'), format(addDays(new Date(), 1), 'yyyy-MM-dd')].includes(newTaskData.dueDate)
+                                    ? 'bg-white shadow-sm text-primary' 
+                                    : 'text-slate-500 hover:text-slate-700'
+                                }`}
+                             >
+                                <CalendarDays size={12} />
+                                <span>
+                                    {(![format(new Date(), 'yyyy-MM-dd'), format(addDays(new Date(), 1), 'yyyy-MM-dd')].includes(newTaskData.dueDate)) 
+                                        ? format(parseLocalISO(newTaskData.dueDate), 'MMM d') 
+                                        : ''}
+                                </span>
+                                <input 
+                                    type="date" 
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                                    value={newTaskData.dueDate}
+                                    onChange={(e) => {
+                                        if (e.target.value) setNewTaskData(prev => ({ ...prev, dueDate: e.target.value }));
+                                    }}
+                                />
+                             </label>
+                        </div>
 
                         {/* Category Chip */}
                         <button 
@@ -272,7 +346,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
                     <CheckCircle2 size={40} className="text-slate-300" />
                 </div>
                 <h3 className="text-lg font-bold text-slate-700">All Clear!</h3>
-                <p className="text-sm text-slate-400">You have no tasks for {filter === 'All' ? 'today' : 'this category'}.</p>
+                <p className="text-sm text-slate-400">You have no tasks for {filter === 'All' ? 'this view' : 'this category'}.</p>
             </div>
         )}
 
@@ -355,16 +429,24 @@ const TaskList: React.FC<TaskListProps> = ({ tasks, setTasks }) => {
                             </button>
                          </div>
                          
-                         {/* Due Date */}
+                         {/* Due Date (With Picker) */}
                          <div className="flex-1">
                             <label className="text-xs font-semibold text-slate-500 uppercase">Due</label>
-                            <button 
-                                onClick={() => setEditingTask(prev => prev ? ({ ...prev, dueDate: prev.dueDate === 'Today' ? 'Tomorrow' : 'Today' }) : null)}
-                                className="w-full mt-1 flex items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700"
-                            >
+                            {/* Changed outer DIV to LABEL for better click handling */}
+                            <label className="w-full mt-1 flex items-center justify-center gap-2 p-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-sm font-medium text-slate-700 relative cursor-pointer">
                                 <Calendar size={14} />
-                                {editingTask.dueDate}
-                            </button>
+                                {formatDateForDisplay(editingTask.dueDate)}
+                                
+                                {/* Overlay Input with high Z-Index and full coverage */}
+                                <input 
+                                    type="date" 
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-50"
+                                    value={editingTask.dueDate}
+                                    onChange={(e) => {
+                                        if (e.target.value) setEditingTask(prev => prev ? ({ ...prev, dueDate: e.target.value }) : null);
+                                    }}
+                                />
+                            </label>
                          </div>
                     </div>
 

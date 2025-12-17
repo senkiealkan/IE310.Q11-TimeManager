@@ -1,11 +1,19 @@
 
 import { Task, AppUsage, DailyStats, UserGoal } from './types';
 
+// Helper to get ISO date string relative to today
+const getRelativeDate = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split('T')[0];
+};
+
 export const INITIAL_TASKS: Task[] = [
-  { id: '1', title: 'Calculus Assignment', category: 'Study', priority: 'High', completed: false, dueDate: 'Today', durationMinutes: 60 },
-  { id: '2', title: 'Read History Chapter 4', category: 'Study', priority: 'Medium', completed: false, dueDate: 'Tomorrow', durationMinutes: 45 },
-  { id: '3', title: 'Gym Workout', category: 'Health', priority: 'Medium', completed: true, dueDate: 'Today', durationMinutes: 60 },
-  { id: '4', title: 'Group Project UI Design', category: 'Project', priority: 'High', completed: false, dueDate: 'Wed', durationMinutes: 120 },
+  { id: '1', title: 'Calculus Assignment', category: 'Study', priority: 'High', completed: false, dueDate: getRelativeDate(0), durationMinutes: 60 },
+  { id: '2', title: 'Read History Chapter 4', category: 'Study', priority: 'Medium', completed: false, dueDate: getRelativeDate(1), durationMinutes: 45 },
+  { id: '3', title: 'Gym Workout', category: 'Health', priority: 'Medium', completed: true, dueDate: getRelativeDate(0), durationMinutes: 60 },
+  { id: '4', title: 'Group Project UI Design', category: 'Project', priority: 'High', completed: false, dueDate: getRelativeDate(3), durationMinutes: 120 },
+  { id: '5', title: 'Return Library Book', category: 'Personal', priority: 'Low', completed: false, dueDate: getRelativeDate(-1), durationMinutes: 15 }, // Overdue Example
 ];
 
 export const MOCK_USAGE: AppUsage[] = [
