@@ -18,12 +18,27 @@ const App: React.FC = () => {
   const [usage] = useState<AppUsage[]>(MOCK_USAGE);
   const [stats, setStats] = useState<DailyStats>(TODAY_STATS);
 
-  const handleFocusComplete = (minutes: number) => {
+  const handleFocusComplete = (minutes: number, taskId?: string) => {
+    // 1. Update Stats
     setStats(prev => ({
       ...prev,
       studyMinutes: prev.studyMinutes + minutes,
-      focusScore: Math.min(100, prev.focusScore + 10) // Gamification
+      focusScore: Math.min(100, prev.focusScore + (taskId ? 15 : 10)) // Bonus points for linked task
     }));
+
+    // 2. Mark task as complete if linked
+    if (taskId) {
+        setTasks(prev => prev.map(t => 
+            t.id === taskId ? { ...t, completed: true } : t
+        ));
+        // Optional: Show a success toast or alert here
+        alert(`Great job! Session complete and +${minutes} mins added.`);
+    } else {
+        alert("Focus session complete!");
+    }
+    
+    // 3. Return to dashboard
+    setCurrentTab(Tab.HOME);
   };
 
   const renderContent = () => {
@@ -41,7 +56,13 @@ const App: React.FC = () => {
       case Tab.TASKS:
         return <TaskList tasks={tasks} setTasks={setTasks} />;
       case Tab.FOCUS:
-        return <FocusMode onExit={() => setCurrentTab(Tab.HOME)} onComplete={handleFocusComplete} />;
+        return (
+            <FocusMode 
+                tasks={tasks}
+                onExit={() => setCurrentTab(Tab.HOME)} 
+                onComplete={handleFocusComplete} 
+            />
+        );
       case Tab.STATS:
         return <StatsView usage={usage} />;
       case Tab.PROFILE:
