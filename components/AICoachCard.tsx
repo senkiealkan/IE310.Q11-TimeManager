@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
 import { getAIAdvice } from '../services/geminiService';
-import { Task, AppUsage } from '../types';
+// FIX: Import UserMood to use it in component props.
+import { Task, AppUsage, UserMood } from '../types';
 
 interface AICoachCardProps {
   tasks: Task[];
   usage: AppUsage[];
   focusScore: number;
+  // FIX: Add 'mood' to props to fix the type error from the parent component.
+  mood: UserMood;
 }
 
-const AICoachCard: React.FC<AICoachCardProps> = ({ tasks, usage, focusScore }) => {
+const AICoachCard: React.FC<AICoachCardProps> = ({ tasks, usage, focusScore, mood }) => {
   const [advice, setAdvice] = useState<string>("Analyzing your day...");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
@@ -18,7 +21,8 @@ const AICoachCard: React.FC<AICoachCardProps> = ({ tasks, usage, focusScore }) =
     setLoading(true);
     setError(false);
     try {
-      const text = await getAIAdvice(tasks, usage, focusScore);
+      // FIX: Pass the new 'mood' prop to the AI advice service for a tailored response.
+      const text = await getAIAdvice(tasks, usage, focusScore, mood);
       setAdvice(text);
     } catch (e) {
       setError(true);

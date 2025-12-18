@@ -9,19 +9,49 @@ export interface Task {
   durationMinutes: number;
 }
 
+export interface Badge {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  unlocked: boolean;
+  color: string;
+}
+
+export interface LinkedAccount {
+  id: string;
+  name: string;
+  avatar: string;
+}
+
 export interface DailyStats {
   date: string;
   studyMinutes: number;
   socialMinutes: number;
-  focusScore: number; // 0-100
+  focusScore: number;
+  breakdown?: {
+    studyPoints: number;
+    taskPoints: number;
+    controlPoints: number;
+    penaltyPoints: number;
+  };
 }
 
 export interface AppUsage {
   name: string;
   minutes: number;
-  limit: number; // Daily limit in minutes
+  limit: number;
   icon: string;
   color: string;
+}
+
+export type UserMood = 'Focus' | 'Tired' | 'Stressed' | 'Energized' | 'Relaxed';
+
+export interface DailyChallenge {
+  id: string;
+  title: string;
+  reward: number;
+  completed: boolean;
 }
 
 export enum Tab {
