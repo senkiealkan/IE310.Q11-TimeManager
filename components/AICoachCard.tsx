@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, AlertCircle } from 'lucide-react';
 import { getAIAdvice } from '../services/geminiService';
@@ -15,6 +14,18 @@ const AICoachCard: React.FC<AICoachCardProps> = ({ tasks, usage, focusScore, moo
   const [advice, setAdvice] = useState<string>("Analyzing your day...");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(!!process.env.API_KEY);
+
+  // Check for selected API key on mount as per guidelines
+  useEffect(() => {
+    const checkApiKeyStatus = async () => {
+      if (window.aistudio && typeof window.aistudio.hasSelectedApiKey === 'function') {
+        const isSelected = await window.aistudio.hasSelectedApiKey();
+        setHasApiKey(isSelected);
+      }
+    };
+    checkApiKeyStatus();
+  }, []);
 
   const fetchAdvice = async () => {
     setLoading(true);
@@ -31,12 +42,19 @@ const AICoachCard: React.FC<AICoachCardProps> = ({ tasks, usage, focusScore, moo
   };
 
   useEffect(() => {
-    // Initial fetch
-    fetchAdvice();
+    if (hasApiKey) {
+      fetchAdvice();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mood]); // Re-fetch advice when mood changes
+  }, [mood, hasApiKey]); // Re-fetch advice when mood or key status changes
 
-  const hasApiKey = !!process.env.API_KEY;
+  const handleConnectKey = async () => {
+    if (window.aistudio && typeof window.aistudio.openSelectKey === 'function') {
+      await window.aistudio.openSelectKey();
+      // Guideline: Assume the key selection was successful and proceed.
+      setHasApiKey(true);
+    }
+  };
 
   if (!hasApiKey) {
       return (
@@ -49,7 +67,7 @@ const AICoachCard: React.FC<AICoachCardProps> = ({ tasks, usage, focusScore, moo
                Please select an API Key to enable your personal AI coach.
             </p>
              <button 
-                onClick={() => window.aistudio?.openSelectKey()}
+                onClick={handleConnectKey}
                 className="bg-white/20 hover:bg-white/30 text-white text-xs font-semibold py-2 px-4 rounded-full transition-colors"
             >
                 Connect Key

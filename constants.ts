@@ -1,5 +1,5 @@
 
-import { Task, AppUsage, DailyStats, UserGoal, Badge, LinkedAccount } from './types';
+import { Task, AppUsage, DailyStats, UserGoal, Badge } from './types';
 
 const getRelativeDate = (days: number) => {
   const date = new Date();
@@ -22,14 +22,15 @@ export const MOCK_USAGE: AppUsage[] = [
   { name: 'WhatsApp', minutes: 15, limit: 45, icon: 'message-circle', color: '#25D366' },
 ];
 
+// Added missing xp and level properties to each DailyStats entry
 export const WEEKLY_STATS: DailyStats[] = [
-  { date: 'Mon', studyMinutes: 120, socialMinutes: 150, focusScore: 45, breakdown: { studyPoints: 20, taskPoints: 15, controlPoints: 10, penaltyPoints: 5 } },
-  { date: 'Tue', studyMinutes: 180, socialMinutes: 90, focusScore: 70, breakdown: { studyPoints: 35, taskPoints: 25, controlPoints: 10, penaltyPoints: 0 } },
-  { date: 'Wed', studyMinutes: 240, socialMinutes: 60, focusScore: 85, breakdown: { studyPoints: 45, taskPoints: 30, controlPoints: 10, penaltyPoints: 0 } },
-  { date: 'Thu', studyMinutes: 150, socialMinutes: 120, focusScore: 60, breakdown: { studyPoints: 30, taskPoints: 20, controlPoints: 10, penaltyPoints: 0 } },
-  { date: 'Fri', studyMinutes: 200, socialMinutes: 100, focusScore: 65, breakdown: { studyPoints: 35, taskPoints: 20, controlPoints: 10, penaltyPoints: 0 } },
-  { date: 'Sat', studyMinutes: 90, socialMinutes: 240, focusScore: 30, breakdown: { studyPoints: 15, taskPoints: 10, controlPoints: 5, penaltyPoints: 15 } },
-  { date: 'Sun', studyMinutes: 120, socialMinutes: 180, focusScore: 40, breakdown: { studyPoints: 20, taskPoints: 10, controlPoints: 10, penaltyPoints: 5 } },
+  { date: 'Mon', studyMinutes: 120, socialMinutes: 150, focusScore: 45, xp: 100, level: 1, breakdown: { studyPoints: 20, taskPoints: 15, controlPoints: 10, penaltyPoints: 5 } },
+  { date: 'Tue', studyMinutes: 180, socialMinutes: 90, focusScore: 70, xp: 250, level: 1, breakdown: { studyPoints: 35, taskPoints: 25, controlPoints: 10, penaltyPoints: 0 } },
+  { date: 'Wed', studyMinutes: 240, socialMinutes: 60, focusScore: 85, xp: 450, level: 1, breakdown: { studyPoints: 45, taskPoints: 30, controlPoints: 10, penaltyPoints: 0 } },
+  { date: 'Thu', studyMinutes: 150, socialMinutes: 120, focusScore: 60, xp: 600, level: 1, breakdown: { studyPoints: 30, taskPoints: 20, controlPoints: 10, penaltyPoints: 0 } },
+  { date: 'Fri', studyMinutes: 200, socialMinutes: 100, focusScore: 65, xp: 800, level: 1, breakdown: { studyPoints: 35, taskPoints: 20, controlPoints: 10, penaltyPoints: 0 } },
+  { date: 'Sat', studyMinutes: 90, socialMinutes: 240, focusScore: 30, xp: 850, level: 1, breakdown: { studyPoints: 15, taskPoints: 10, controlPoints: 5, penaltyPoints: 15 } },
+  { date: 'Sun', studyMinutes: 120, socialMinutes: 180, focusScore: 40, xp: 950, level: 1, breakdown: { studyPoints: 20, taskPoints: 10, controlPoints: 10, penaltyPoints: 5 } },
 ];
 
 export const INITIAL_GOALS: UserGoal[] = [
@@ -44,12 +45,6 @@ export const BADGES: Badge[] = [
   { id: '4', name: 'Social Hermit', icon: '🐌', description: 'Zero social media for 24 hours', unlocked: true, color: 'bg-green-100' },
   { id: '5', name: 'Task Slayer', icon: '⚔️', description: 'Finish 10 tasks in one day', unlocked: false, color: 'bg-purple-100' },
   { id: '6', name: 'Zen Master', icon: '🧘', description: 'Use focus sounds for 5 hours', unlocked: false, color: 'bg-indigo-100' },
-];
-
-export const LINKED_ACCOUNTS: LinkedAccount[] = [
-  { id: '1', name: 'Jordan S.', avatar: 'https://i.pravatar.cc/150?u=jordan' },
-  { id: '2', name: 'Casey L.', avatar: 'https://i.pravatar.cc/150?u=casey' },
-  { id: '3', name: 'Milo H.', avatar: 'https://i.pravatar.cc/150?u=milo' },
 ];
 
 export const QUOTES = [

@@ -5,7 +5,7 @@ export interface Task {
   category: 'Study' | 'Personal' | 'Project' | 'Health';
   priority: 'High' | 'Medium' | 'Low';
   completed: boolean;
-  dueDate: string; // ISO Date String (YYYY-MM-DD)
+  dueDate: string;
   durationMinutes: number;
 }
 
@@ -18,17 +18,13 @@ export interface Badge {
   color: string;
 }
 
-export interface LinkedAccount {
-  id: string;
-  name: string;
-  avatar: string;
-}
-
 export interface DailyStats {
   date: string;
   studyMinutes: number;
   socialMinutes: number;
   focusScore: number;
+  xp: number;
+  level: number;
   breakdown?: {
     studyPoints: number;
     taskPoints: number;

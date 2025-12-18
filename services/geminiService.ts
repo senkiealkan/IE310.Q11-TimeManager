@@ -1,15 +1,5 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { Task, AppUsage, UserMood } from "../types";
-
-let client: GoogleGenAI | null = null;
-
-const getClient = () => {
-  if (!client && process.env.API_KEY) {
-    client = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  }
-  return client;
-};
 
 export const getAIAdvice = async (
   tasks: Task[],
@@ -17,10 +7,12 @@ export const getAIAdvice = async (
   currentFocusScore: number,
   mood: UserMood
 ): Promise<string> => {
-  const ai = getClient();
-  if (!ai) {
+  // Always verify if API_KEY is available and create a new instance right before the call.
+  if (!process.env.API_KEY) {
     return "Please set your API Key to unlock the AI Focus Coach! 🧠";
   }
+
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   const incompleteTasks = tasks.filter(t => !t.completed).map(t => t.title).join(", ");
   const topDistraction = usage.sort((a, b) => b.minutes - a.minutes)[0];
@@ -40,9 +32,10 @@ export const getAIAdvice = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: 'gemini-3-flash-preview',
       contents: prompt,
     });
+    // Extracting text output from response using the .text property as per guidelines.
     return response.text?.trim() || "Keep pushing! You're doing great. Focus on one task at a time. 🚀";
   } catch (error) {
     console.error("Gemini API Error:", error);
