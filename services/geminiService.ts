@@ -1,5 +1,5 @@
+
 import { GoogleGenAI } from "@google/genai";
-// FIX: Import UserMood type to use in function signature.
 import { Task, AppUsage, UserMood } from "../types";
 
 let client: GoogleGenAI | null = null;
@@ -15,7 +15,6 @@ export const getAIAdvice = async (
   tasks: Task[],
   usage: AppUsage[],
   currentFocusScore: number,
-  // FIX: Accept user's mood to provide more personalized advice.
   mood: UserMood
 ): Promise<string> => {
   const ai = getClient();
@@ -26,7 +25,6 @@ export const getAIAdvice = async (
   const incompleteTasks = tasks.filter(t => !t.completed).map(t => t.title).join(", ");
   const topDistraction = usage.sort((a, b) => b.minutes - a.minutes)[0];
 
-  // FIX: Update prompt to include mood and instruct the AI to consider it.
   const prompt = `
     Act as a friendly, cool, and motivating productivity coach for a university student.
     User Context:
@@ -41,12 +39,10 @@ export const getAIAdvice = async (
   `;
 
   try {
-    // FIX: Update model to 'gemini-3-flash-preview' as per guidelines.
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
     });
-    // FIX: Safely access and trim the response text, providing a fallback.
     return response.text?.trim() || "Keep pushing! You're doing great. Focus on one task at a time. 🚀";
   } catch (error) {
     console.error("Gemini API Error:", error);

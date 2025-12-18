@@ -11,7 +11,6 @@ import { Task } from '../types';
 interface FocusModeProps {
   tasks: Task[];
   onExit: () => void;
-  // FIX: Corrected the syntax for the 'onComplete' function type. The parameter 'minutes' was missing a colon.
   onComplete: (minutes: number, taskId?: string) => void;
   initialSound: string;
   onSoundChange: (sound: string) => void;
@@ -65,29 +64,44 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
   
   // --- Audio Engine ---
   useEffect(() => {
+    // Initialize audio element if it doesn't exist
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.loop = true;
     }
     const audio = audioRef.current;
     
+    // Find the selected sound source
     const selectedSound = AMBIENCE_OPTIONS.find(opt => opt.id === initialSound);
-    if (initialSound === 'silent' || !selectedSound?.src) {
-      audio.pause();
-      return;
-    }
-    
-    if (audio.src !== selectedSound.src) {
-        audio.src = selectedSound.src;
+    const newSrc = selectedSound?.src || '';
+
+    // Update the source only if it has changed to prevent re-loading
+    if (audio.src !== newSrc) {
+        audio.src = newSrc;
     }
 
-    if (isActive) {
-      audio.play().catch(e => console.error("Audio play failed:", e));
+    // Control playback based on state
+    if (isActive && newSrc) {
+        // A valid source is selected and the timer is active
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.error("Audio play failed:", error);
+            });
+        }
     } else {
-      audio.pause();
+        // Pause if timer is inactive or sound is 'silent'
+        audio.pause();
     }
+    
+    // Cleanup audio on component unmount
+    return () => {
+        if (audio) {
+            audio.pause();
+        }
+    };
   }, [initialSound, isActive]);
-  
+
   useEffect(() => {
     if (audioRef.current) audioRef.current.volume = volume;
   }, [volume]);
@@ -209,12 +223,29 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
 
   const radius = 120;
   const circumference = 2 * Math.PI * radius;
-  const visualProgress = initialTime > 0 ? initialTime / (MAX_FOCUS_MINUTES * 60) : 0;
-  const strokeDashoffset = circumference - visualProgress * circumference;
-  
-  const handleAngle = visualProgress * 360;
+
+  let ringProgressPercent;
+  if (isActive) {
+    // When the timer is active, the ring drains from full based on the session's duration.
+    ringProgressPercent = initialTime > 0 ? timeLeft / initialTime : 0;
+  } else {
+    // When the timer is not active, the display depends on the mode.
+    if (selectedPresetId === 'custom') {
+      // In 'Custom' mode, the ring shows a partial arc corresponding to the selected time vs the max possible time.
+      ringProgressPercent = initialTime > 0 ? initialTime / (MAX_FOCUS_MINUTES * 60) : 0;
+    } else {
+      // For presets, the ring is completely full, indicating the session is ready.
+      ringProgressPercent = 1;
+    }
+  }
+  const strokeDashoffset = circumference - ringProgressPercent * circumference;
+
+  // The draggable handle's position is always calculated relative to the max time.
+  const handleVisualProgress = initialTime > 0 ? initialTime / (MAX_FOCUS_MINUTES * 60) : 0;
+  const handleAngle = handleVisualProgress * 360;
   const handleX = 144 + radius * Math.cos((handleAngle - 90) * Math.PI / 180);
   const handleY = 144 + radius * Math.sin((handleAngle - 90) * Math.PI / 180);
+
 
   if (isCompleted) {
     return (
@@ -308,7 +339,7 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
                   <circle transform="rotate(-90 144 144)" cx="144" cy="144" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" className="text-slate-100 dark:text-slate-900" />
                   <circle transform="rotate(-90 144 144)" cx="144" cy="144" r={radius} stroke="currentColor" strokeWidth="10" fill="transparent"
                       strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} strokeLinecap="round"
-                      className={`text-primary transition-all duration-300 ease-linear drop-shadow-xl ${isActive ? 'animate-breathe' : ''}`}
+                      className={`text-primary transition-all duration-1000 ease-linear drop-shadow-xl ${isActive ? 'animate-breathe' : ''}`}
                   />
                   {!isActive && selectedPresetId === 'custom' && (
                       <g>
@@ -341,11 +372,32 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
               ))}
           </div>
 
-          <div className="w-full max-w-xs">
-              <button onClick={toggleTimer} className="w-full h-16 bg-primary text-white rounded-2xl font-black text-sm tracking-widest shadow-xl shadow-primary/30 active:scale-95 transition-transform flex items-center justify-center gap-2">
-                  {isActive ? <Pause size={18} fill="currentColor"/> : <Play size={18} fill="currentColor"/>}
-                  {isActive ? 'PAUSE' : 'START FOCUS'}
-              </button>
+          <div className="w-full max-w-xs flex items-center gap-3">
+            {isActive ? (
+                <>
+                    <button 
+                        onClick={toggleTimer} 
+                        className="flex-1 h-16 bg-primary text-white rounded-2xl font-black text-sm tracking-widest shadow-xl shadow-primary/30 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                    >
+                        <Pause size={18} fill="currentColor"/>
+                        PAUSE
+                    </button>
+                    <button 
+                        onClick={() => setShowGiveUpConfirm(true)}
+                        className="flex-1 h-16 bg-red-500 text-white rounded-2xl font-black text-sm tracking-widest shadow-lg shadow-red-500/30 active:scale-95 transition-transform flex items-center justify-center"
+                    >
+                        GIVE UP
+                    </button>
+                </>
+            ) : (
+                <button 
+                    onClick={toggleTimer} 
+                    className="w-full h-16 bg-primary text-white rounded-2xl font-black text-sm tracking-widest shadow-xl shadow-primary/30 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                >
+                    <Play size={18} fill="currentColor"/>
+                    START FOCUS
+                </button>
+            )}
           </div>
         </div>
       </div>
