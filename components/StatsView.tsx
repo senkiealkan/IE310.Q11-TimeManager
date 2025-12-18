@@ -69,13 +69,14 @@ const StatsView: React.FC<StatsViewProps> = ({ usage, setUsage, tasks, focusScor
     }
   };
 
-  const deleteApp = (appName: string, e?: React.MouseEvent) => {
-    if (e) {
-      e.stopPropagation();
-      e.preventDefault();
-    }
+  const handleDeleteClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
     
-    if (window.confirm(`Confirm: Stop tracking and remove limits for "${appName}"?`)) {
+    const appName = e.currentTarget.dataset.appName;
+    if (!appName) return;
+
+    if (window.confirm(`Bạn có chắc chắn muốn ngừng theo dõi và xóa giới hạn cho "${appName}" không?`)) {
       setEditingApp(null);
       setUsage(currentUsage => currentUsage.filter(app => app.name !== appName));
     }
@@ -239,7 +240,8 @@ const StatsView: React.FC<StatsViewProps> = ({ usage, setUsage, tasks, focusScor
                       <div className="flex gap-2">
                         <button 
                             type="button"
-                            onClick={(e) => deleteApp(app.name, e)}
+                            onClick={handleDeleteClick}
+                            data-app-name={app.name}
                             className="w-10 h-10 flex items-center justify-center text-red-400 bg-red-50 hover:bg-red-500 hover:text-white rounded-xl transition-all active:scale-90 shadow-sm z-20"
                             aria-label="Remove App"
                         >
@@ -299,7 +301,8 @@ const StatsView: React.FC<StatsViewProps> = ({ usage, setUsage, tasks, focusScor
                     </button>
                     <button 
                         type="button"
-                        onClick={(e) => deleteApp(editingApp.name, e)} 
+                        onClick={handleDeleteClick}
+                        data-app-name={editingApp.name}
                         className="w-full py-4 text-red-500 bg-red-50 font-black rounded-3xl active:scale-95 transition-all flex items-center justify-center gap-2 uppercase tracking-widest text-[10px]"
                     >
                         <Trash2 size={16} /> Stop Tracking App

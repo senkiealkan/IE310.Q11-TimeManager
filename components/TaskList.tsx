@@ -3,15 +3,16 @@ import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Plus, Calendar, CheckCircle2, Circle, Tag, 
   Trash2, Flag, MoreHorizontal, X, Save, AlertCircle, ChevronDown, CalendarDays,
-  ChevronLeft, ChevronRight, ListTree, FileText, Search, Check, CornerDownRight,
-  BookOpen, User, Briefcase, Heart, Layers, Settings, Grid
+  ListTree, FileText, Search, CornerDownRight,
+  BookOpen, User, Briefcase, Heart, Layers, Grid
 } from 'lucide-react';
 import { 
-  format, isToday, isTomorrow, isPast, addDays, isValid, compareAsc,
-  endOfMonth, endOfWeek, eachDayOfInterval,
-  isSameMonth, isSameDay, addMonths
+  format, isToday, isTomorrow, isPast, addDays, isValid, compareAsc
 } from 'date-fns';
 import { Task } from '../types';
+import CalendarPicker from './CalendarPicker';
+import CategorySelector from './CategorySelector';
+import TaskCard, { TaskWithDetails } from './TaskCard';
 
 // --- Extended Types & Config ---
 
@@ -63,11 +64,6 @@ interface Subtask {
   completed: boolean;
 }
 
-interface TaskWithDetails extends Task {
-  subtasks?: Subtask[];
-  notes?: string;
-}
-
 interface TaskListProps {
   tasks: Task[];
   setTasks: React.Dispatch<React.SetStateAction<Task[]>>;
@@ -89,24 +85,6 @@ const parseLocalISO = (dateStr: string) => {
   return new Date(dateStr);
 };
 
-const getPriorityColor = (priority: string) => {
-  switch (priority) {
-    case 'High': return 'text-red-500 border-red-500 bg-red-50';
-    case 'Medium': return 'text-orange-500 border-orange-500 bg-orange-50';
-    case 'Low': return 'text-blue-500 border-blue-500 bg-blue-50';
-    default: return 'text-slate-400 border-slate-300 bg-slate-50';
-  }
-};
-
-const getCheckboxColor = (priority: string) => {
-    switch (priority) {
-      case 'High': return 'text-red-500';
-      case 'Medium': return 'text-orange-500';
-      case 'Low': return 'text-blue-500';
-      default: return 'text-slate-300';
-    }
-};
-
 const formatDateForDisplay = (isoString: string) => {
     const date = parseLocalISO(isoString);
     if (!isValid(date)) return isoString;
@@ -114,178 +92,6 @@ const formatDateForDisplay = (isoString: string) => {
     if (isTomorrow(date)) return 'Tomorrow';
     if (isPast(date) && !isToday(date)) return format(date, 'MMM d');
     return format(date, 'MMM d');
-};
-
-// --- Sub-components ---
-
-const CalendarPicker = ({ 
-    selectedDateStr, 
-    onSelect 
-}: { 
-    selectedDateStr: string, 
-    onSelect: (dateStr: string) => void 
-}) => {
-    const selectedDate = parseLocalISO(selectedDateStr);
-    const [viewDate, setViewDate] = useState(isValid(selectedDate) ? selectedDate : new Date());
-
-    const days = useMemo(() => {
-        const start = new Date(viewDate.getFullYear(), viewDate.getMonth(), 1);
-        const startWeek = new Date(start);
-        startWeek.setDate(start.getDate() - start.getDay());
-        const end = new Date(viewDate.getFullYear(), viewDate.getMonth() + 1, 0);
-        const endWeek = new Date(end);
-        endWeek.setDate(end.getDate() + (6 - end.getDay()));
-        return eachDayOfInterval({ start: startWeek, end: endWeek });
-    }, [viewDate]);
-
-    return (
-        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 animate-in fade-in zoom-in-95 duration-200 mt-2 relative z-50">
-            <div className="flex justify-between items-center mb-4 px-1">
-                <button onClick={() => setViewDate(addMonths(viewDate, -1))} className="p-1 hover:bg-slate-200 rounded-full"><ChevronLeft size={18} className="text-slate-500" /></button>
-                <span className="text-sm font-bold text-slate-800">{format(viewDate, 'MMMM yyyy')}</span>
-                <button onClick={() => setViewDate(addMonths(viewDate, 1))} className="p-1 hover:bg-slate-200 rounded-full"><ChevronRight size={18} className="text-slate-500" /></button>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center mb-2">
-                {['S','M','T','W','T','F','S'].map(d => <div key={d} className="text-[10px] font-bold text-slate-400 mb-1">{d}</div>)}
-                {days.map((date, idx) => {
-                    const isSelected = isSameDay(parseLocalISO(selectedDateStr), date);
-                    const isTodayDate = isToday(date);
-                    const isCurrentMonth = isSameMonth(date, viewDate);
-                    return (
-                        <button
-                            key={idx}
-                            onClick={() => onSelect(format(date, 'yyyy-MM-dd'))}
-                            className={`h-8 w-8 rounded-full flex items-center justify-center text-xs font-medium transition-all 
-                                ${isSelected ? 'bg-primary text-white shadow-md' : isTodayDate ? 'bg-white border border-primary text-primary font-bold' : 'hover:bg-slate-200 text-slate-700'} 
-                                ${!isCurrentMonth ? 'text-slate-300 opacity-50' : ''}`}
-                        >
-                            {format(date, 'd')}
-                        </button>
-                    );
-                })}
-            </div>
-        </div>
-    );
-};
-
-const CategorySelector = ({
-    selectedCategory,
-    onSelect
-}: {
-    selectedCategory: string,
-    onSelect: (category: string) => void
-}) => {
-    const [isOpen, setIsOpen] = useState(false);
-    const containerRef = useRef<HTMLDivElement>(null);
-
-    // Close on click outside
-    useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-            }
-        };
-        document.addEventListener("mousedown", handleClickOutside);
-        return () => document.removeEventListener("mousedown", handleClickOutside);
-    }, []);
-
-    const currentConfig = CATEGORY_CONFIG[selectedCategory] || CATEGORY_CONFIG.Personal;
-    const Icon = currentConfig.icon;
-
-    return (
-        <div className="relative" ref={containerRef}>
-            <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:opacity-80
-                ${currentConfig.colors} ${currentConfig.border} bg-opacity-10 border-opacity-50`}
-            >
-                <Icon size={12} />
-                {currentConfig.label}
-            </button>
-
-            {isOpen && (
-                <div className="absolute top-full left-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-100 overflow-hidden z-[60] animate-in fade-in slide-in-from-top-2 p-1">
-                    <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider px-3 py-2">Select Category</div>
-                    {Object.keys(CATEGORY_CONFIG).map((key) => {
-                        const config = CATEGORY_CONFIG[key];
-                        const ItemIcon = config.icon;
-                        const isSelected = selectedCategory === key;
-                        return (
-                            <button
-                                key={key}
-                                onClick={() => { onSelect(key); setIsOpen(false); }}
-                                className={`w-full flex items-center gap-3 px-3 py-2 text-sm rounded-lg transition-colors ${isSelected ? 'bg-slate-50' : 'hover:bg-slate-50'}`}
-                            >
-                                <div className={`w-6 h-6 rounded-full flex items-center justify-center ${config.colors} bg-opacity-20`}>
-                                    <ItemIcon size={14} />
-                                </div>
-                                <span className={`flex-1 text-left ${isSelected ? 'font-semibold text-slate-800' : 'text-slate-600'}`}>{config.label}</span>
-                                {isSelected && <Check size={14} className="text-primary" />}
-                            </button>
-                        )
-                    })}
-                </div>
-            )}
-        </div>
-    );
-};
-
-interface RenderTaskCardProps {
-    task: TaskWithDetails;
-    onClick: () => void;
-    onToggle: (id: string, event?: React.MouseEvent) => void;
-}
-
-const RenderTaskCard: React.FC<RenderTaskCardProps> = ({ task, onClick, onToggle }) => {
-    const isOverdue = !task.completed && isPast(parseLocalISO(task.dueDate)) && !isToday(parseLocalISO(task.dueDate));
-    const totalSub = task.subtasks?.length || 0;
-    const completedSub = task.subtasks?.filter(s => s.completed).length || 0;
-    
-    // Get Category Config
-    const catConfig = CATEGORY_CONFIG[task.category] || CATEGORY_CONFIG.Personal;
-    const CatIcon = catConfig.icon;
-
-    return (
-        <div 
-            onClick={onClick}
-            className="group bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all cursor-pointer flex items-center gap-3 mb-2"
-        >
-            <button 
-                onClick={(e) => { e.stopPropagation(); onToggle(task.id, e); }}
-                className={`transition-colors active:scale-90 ${getCheckboxColor(task.priority)}`}
-            >
-                {task.completed ? <CheckCircle2 size={22} className="text-slate-400" /> : <Circle size={22} />}
-            </button>
-            <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start">
-                    <h3 className={`font-medium text-sm text-slate-800 truncate ${task.completed ? 'line-through text-slate-400' : ''}`}>
-                        {task.title}
-                    </h3>
-                </div>
-                
-                <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-400">
-                    <span className={`px-1.5 py-0.5 rounded border flex items-center gap-1 ${catConfig.colors} bg-opacity-20 border-opacity-50`}>
-                        <CatIcon size={10} />
-                        {task.category}
-                    </span>
-                    <span className={`px-1.5 py-0.5 rounded ${getPriorityColor(task.priority)} bg-opacity-20 border-0`}>
-                        {task.priority}
-                    </span>
-                    <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-500 font-semibold' : ''}`}>
-                        <Calendar size={10} /> {formatDateForDisplay(task.dueDate)}
-                    </span>
-                    {totalSub > 0 && (
-                        <span className="flex items-center gap-1 text-slate-500 font-medium">
-                            <ListTree size={10} /> {completedSub}/{totalSub}
-                        </span>
-                    )}
-                </div>
-            </div>
-            <button className="text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreHorizontal size={16} />
-            </button>
-        </div>
-    );
 };
 
 const TaskList: React.FC<TaskListProps> = ({ tasks: rawTasks, setTasks }) => {
@@ -336,7 +142,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks: rawTasks, setTasks }) => {
             console.error("Failed to load tasks", e);
         }
     }
-  }, []);
+  }, [setTasks]);
 
   useEffect(() => {
     if (tasks.length > 0) {
@@ -566,7 +372,7 @@ const TaskList: React.FC<TaskListProps> = ({ tasks: rawTasks, setTasks }) => {
                 All
             </button>
             {Object.keys(CATEGORY_CONFIG).map(key => {
-                const config = CATEGORY_CONFIG[key];
+                const config = CATEGORY_CONFIG[key as CategoryKey];
                 const isActive = filter === key;
                 return (
                     <button
@@ -730,36 +536,20 @@ const TaskList: React.FC<TaskListProps> = ({ tasks: rawTasks, setTasks }) => {
 
         {/* Task Lists */}
         <div className="space-y-6">
-            {groupedTasks.Overdue.length > 0 && (
-                <div className="animate-in slide-in-from-bottom-2">
-                    <h2 className="text-xs font-bold text-red-500 uppercase tracking-wider mb-2 flex items-center gap-2">
-                        <AlertCircle size={12} /> Overdue
+            {Object.entries(groupedTasks).map(([groupName, groupTasks]) => groupTasks.length > 0 && (
+                <div key={groupName} className="animate-in slide-in-from-bottom-2">
+                     <h2 className={`text-xs font-bold uppercase tracking-wider mb-2 flex items-center gap-2 ${
+                         groupName === 'Overdue' ? 'text-red-500' :
+                         groupName === 'Today' ? 'text-slate-800' :
+                         'text-slate-400'
+                     }`}>
+                        {groupName === 'Overdue' && <AlertCircle size={12} />}
+                        {groupName === 'Today' && <Calendar size={12} />}
+                        {groupName === 'Completed' ? <><CheckCircle2 size={12} /><button className="flex items-center gap-2">Completed <ChevronDown size={12} /></button></> : groupName}
                     </h2>
-                    {groupedTasks.Overdue.map(task => <RenderTaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} onToggle={toggleTask} />)}
+                    {groupTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} onToggle={toggleTask} />)}
                 </div>
-            )}
-            {groupedTasks.Today.length > 0 && (
-                <div className="animate-in slide-in-from-bottom-4 duration-300">
-                    <h2 className="text-xs font-bold text-slate-800 uppercase tracking-wider mb-2 flex items-center gap-2">
-                        <Calendar size={12} /> Today
-                    </h2>
-                    {groupedTasks.Today.map(task => <RenderTaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} onToggle={toggleTask} />)}
-                </div>
-            )}
-            {groupedTasks.Upcoming.length > 0 && (
-                <div className="animate-in slide-in-from-bottom-6 duration-500">
-                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Upcoming</h2>
-                    {groupedTasks.Upcoming.map(task => <RenderTaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} onToggle={toggleTask} />)}
-                </div>
-            )}
-            {groupedTasks.Completed.length > 0 && (
-                <div className="pt-4 border-t border-slate-100 mt-4 opacity-60">
-                    <button className="flex items-center gap-2 text-xs font-bold text-slate-400 mb-2 hover:text-slate-600">
-                        Completed <ChevronDown size={12} />
-                    </button>
-                    {groupedTasks.Completed.map(task => <RenderTaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} onToggle={toggleTask} />)}
-                </div>
-            )}
+            ))}
         </div>
       </div>
 
