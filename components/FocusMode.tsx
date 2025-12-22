@@ -14,7 +14,6 @@ interface FocusModeProps {
   onComplete: (minutes: number, taskId?: string) => void;
   initialSound: string;
   onSoundChange: (sound: string) => void;
-  // Added activeTaskId to props definition to fix missing property error in App.tsx
   activeTaskId?: string;
 }
 
@@ -34,11 +33,27 @@ const FOCUS_QUOTES = [
   "You don't find time, you make it."
 ];
 
+// Sử dụng các URL âm thanh trực tuyến từ CDN uy tín để tránh lỗi CORS và đường dẫn cục bộ
 const AMBIENCE_OPTIONS = [
   { id: 'silent', icon: Volume2, label: 'Silent', src: '' },
-  { id: 'rain', icon: CloudRain, label: 'Rain', src: '/data/rain.mp3' },
-  { id: 'stream', icon: Waves, label: 'Stream', src: '/data/stream.mp3' },
-  { id: 'white_noise', icon: AudioWaveform, label: 'White Noise', src: '/data/white-noise.mp3' },
+  { 
+    id: 'rain', 
+    icon: CloudRain, 
+    label: 'Rain', 
+    src: 'https://dl.dropbox.com/scl/fi/wijnpkwpb6hyt9c6k73qd/rain.mp3?rlkey=4d4vnw6o2ieq9gby1s5wc0r3z&st=7x7yxhnx&dl=0' 
+  },
+  { 
+    id: 'stream', 
+    icon: Waves, 
+    label: 'Stream', 
+    src: 'https://dl.dropbox.com/scl/fi/ncnue5qvyol4t7tptnlk9/stream.mp3?rlkey=x7kfqtz6bn531f9c3cij5vheg&st=98irvd3f&dl=0' 
+  },
+  { 
+    id: 'white_noise', 
+    icon: AudioWaveform, 
+    label: 'White Noise', 
+    src: 'https://đl.dropbox.com/scl/fi/826z4hkdvuhtfha71hykp/white-noise.mp3?rlkey=82fh0jo5i0axt3dx22ut1q5da&st=v7acuqv6&dl=0' 
+  },
 ];
 
 const MAX_FOCUS_MINUTES = 120;
@@ -67,16 +82,15 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
   
   // --- Audio Engine ---
   useEffect(() => {
-    // Initialize audio element if it doesn't exist
     if (!audioRef.current) {
       const audio = new Audio();
       audio.loop = true;
+      audio.crossOrigin = "anonymous"; // Quan trọng để tránh lỗi CORS khi dùng URL ngoại sàn
       audio.preload = 'auto';
       
-      // Handle errors globally for the audio instance
       audio.onerror = () => {
         const error = audio.error;
-        console.error("Audio playback error:", {
+        console.error("Audio Load Error:", {
           code: error?.code,
           message: error?.message,
           src: audio.src
@@ -90,29 +104,24 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
     const selectedSound = AMBIENCE_OPTIONS.find(opt => opt.id === initialSound);
     const newSrc = selectedSound?.src || '';
 
-    // Update the source only if it has changed
     if (lastSoundSrcRef.current !== newSrc) {
         if (newSrc) {
-            // Set source and load
             audio.src = newSrc;
             audio.load();
         } else {
-            // If silent, stop and clear source to prevent "no supported sources" error
             audio.pause();
             audio.removeAttribute('src');
-            audio.load(); // Resets the element
+            audio.load();
         }
         lastSoundSrcRef.current = newSrc;
     }
 
-    // Playback control
     if (isActive && newSrc) {
         const playPromise = audio.play();
         if (playPromise !== undefined) {
             playPromise.catch(error => {
-                // Autoplay or loading issue
                 if (error.name !== 'AbortError') {
-                  console.warn("Audio play interrupted or blocked:", error);
+                  console.warn("Audio play blocked by browser. Interaction required:", error);
                 }
             });
         }
@@ -190,7 +199,6 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
       return formatDate(endDate, 'p'); 
   };
 
-  // --- Circular Slider Logic ---
   const handleInteractionMove = (clientX: number, clientY: number) => {
     if (!isDraggingRef.current || !timerContainerRef.current || isActive) return;
 
