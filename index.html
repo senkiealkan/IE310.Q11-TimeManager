@@ -8,6 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script>
       tailwind.config = {
+        darkMode: 'class',
         theme: {
           extend: {
             fontFamily: {
@@ -49,7 +50,7 @@
 }
 </script>
 </head>
-  <body class="bg-gray-100 text-slate-800 antialiased h-screen w-screen overflow-hidden flex justify-center items-center">
-    <div id="root" class="w-full h-full max-w-md bg-white shadow-2xl relative overflow-hidden sm:rounded-xl sm:h-[90vh] sm:border sm:border-gray-200"></div>
+  <body class="bg-gray-100 dark:bg-slate-900 text-slate-800 dark:text-slate-100 antialiased h-screen w-screen overflow-hidden flex justify-center items-center transition-colors duration-500">
+    <div id="root" class="w-full h-full max-w-md bg-white dark:bg-slate-950 shadow-2xl relative overflow-hidden sm:rounded-xl sm:h-[90vh] sm:border sm:border-gray-200 dark:sm:border-slate-800"></div>
   </body>
 </html>

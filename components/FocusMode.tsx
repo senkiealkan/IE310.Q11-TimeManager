@@ -14,6 +14,8 @@ interface FocusModeProps {
   onComplete: (minutes: number, taskId?: string) => void;
   initialSound: string;
   onSoundChange: (sound: string) => void;
+  // Added activeTaskId to props definition to fix missing property error in App.tsx
+  activeTaskId?: string;
 }
 
 const PRESETS = [
@@ -34,19 +36,19 @@ const FOCUS_QUOTES = [
 
 const AMBIENCE_OPTIONS = [
   { id: 'silent', icon: Volume2, label: 'Silent', src: '' },
-  { id: 'rain', icon: CloudRain, label: 'Rain', src: 'https://assets.mixkit.co/sfx/preview/mixkit-light-rain-loop-1253.mp3' },
-  { id: 'stream', icon: Waves, label: 'Stream', src: 'https://assets.mixkit.co/sfx/preview/mixkit-river-stream-ambience-loop-1200.mp3' },
-  { id: 'white_noise', icon: AudioWaveform, label: 'White Noise', src: 'https://assets.mixkit.co/sfx/preview/mixkit-static-humming-radio-2447.mp3' },
+  { id: 'rain', icon: CloudRain, label: 'Rain', src: '/data/rain.mp3' },
+  { id: 'stream', icon: Waves, label: 'Stream', src: '/data/stream.mp3' },
+  { id: 'white_noise', icon: AudioWaveform, label: 'White Noise', src: '/data/white-noise.mp3' },
 ];
 
 const MAX_FOCUS_MINUTES = 120;
 
-const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initialSound, onSoundChange }) => {
+const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initialSound, onSoundChange, activeTaskId }) => {
   const [isActive, setIsActive] = useState(false);
   const [isCompleted, setIsCompleted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [initialTime, setInitialTime] = useState(25 * 60);
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(activeTaskId || null);
   const [selectedPresetId, setSelectedPresetId] = useState('pomo');
   const [volume, setVolume] = useState(0.5);
   const [showTaskSelector, setShowTaskSelector] = useState(false);
@@ -55,6 +57,7 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const lastSoundSrcRef = useRef<string>('');
   const timerContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
   const lastAngleRef = useRef<number | null>(null);
@@ -66,35 +69,57 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
   useEffect(() => {
     // Initialize audio element if it doesn't exist
     if (!audioRef.current) {
-      audioRef.current = new Audio();
-      audioRef.current.loop = true;
+      const audio = new Audio();
+      audio.loop = true;
+      audio.preload = 'auto';
+      
+      // Handle errors globally for the audio instance
+      audio.onerror = () => {
+        const error = audio.error;
+        console.error("Audio playback error:", {
+          code: error?.code,
+          message: error?.message,
+          src: audio.src
+        });
+      };
+
+      audioRef.current = audio;
     }
-    const audio = audioRef.current;
     
-    // Find the selected sound source
+    const audio = audioRef.current;
     const selectedSound = AMBIENCE_OPTIONS.find(opt => opt.id === initialSound);
     const newSrc = selectedSound?.src || '';
 
-    // Update the source only if it has changed to prevent re-loading
-    if (audio.src !== newSrc) {
-        audio.src = newSrc;
+    // Update the source only if it has changed
+    if (lastSoundSrcRef.current !== newSrc) {
+        if (newSrc) {
+            // Set source and load
+            audio.src = newSrc;
+            audio.load();
+        } else {
+            // If silent, stop and clear source to prevent "no supported sources" error
+            audio.pause();
+            audio.removeAttribute('src');
+            audio.load(); // Resets the element
+        }
+        lastSoundSrcRef.current = newSrc;
     }
 
-    // Control playback based on state
+    // Playback control
     if (isActive && newSrc) {
-        // A valid source is selected and the timer is active
         const playPromise = audio.play();
         if (playPromise !== undefined) {
             playPromise.catch(error => {
-                console.error("Audio play failed:", error);
+                // Autoplay or loading issue
+                if (error.name !== 'AbortError') {
+                  console.warn("Audio play interrupted or blocked:", error);
+                }
             });
         }
     } else {
-        // Pause if timer is inactive or sound is 'silent'
         audio.pause();
     }
     
-    // Cleanup audio on component unmount
     return () => {
         if (audio) {
             audio.pause();
@@ -103,7 +128,9 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
   }, [initialSound, isActive]);
 
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume;
+    if (audioRef.current) {
+      audioRef.current.volume = volume;
+    }
   }, [volume]);
   
   // --- Timer Logic ---
@@ -160,7 +187,7 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
   
   const getEndTime = () => {
       const endDate = new Date(Date.now() + timeLeft * 1000);
-      return formatDate(endDate, 'p'); // e.g., "1:30 PM"
+      return formatDate(endDate, 'p'); 
   };
 
   // --- Circular Slider Logic ---
@@ -226,26 +253,20 @@ const FocusMode: React.FC<FocusModeProps> = ({ tasks, onExit, onComplete, initia
 
   let ringProgressPercent;
   if (isActive) {
-    // When the timer is active, the ring drains from full based on the session's duration.
     ringProgressPercent = initialTime > 0 ? timeLeft / initialTime : 0;
   } else {
-    // When the timer is not active, the display depends on the mode.
     if (selectedPresetId === 'custom') {
-      // In 'Custom' mode, the ring shows a partial arc corresponding to the selected time vs the max possible time.
       ringProgressPercent = initialTime > 0 ? initialTime / (MAX_FOCUS_MINUTES * 60) : 0;
     } else {
-      // For presets, the ring is completely full, indicating the session is ready.
       ringProgressPercent = 1;
     }
   }
   const strokeDashoffset = circumference - ringProgressPercent * circumference;
 
-  // The draggable handle's position is always calculated relative to the max time.
   const handleVisualProgress = initialTime > 0 ? initialTime / (MAX_FOCUS_MINUTES * 60) : 0;
   const handleAngle = handleVisualProgress * 360;
   const handleX = 144 + radius * Math.cos((handleAngle - 90) * Math.PI / 180);
   const handleY = 144 + radius * Math.sin((handleAngle - 90) * Math.PI / 180);
-
 
   if (isCompleted) {
     return (

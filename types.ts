@@ -2,7 +2,7 @@
 export interface Task {
   id: string;
   title: string;
-  category: 'Study' | 'Personal' | 'Project' | 'Health';
+  category: 'Study' | 'Personal' | 'Project' | 'Health' | 'Work';
   priority: 'High' | 'Medium' | 'Low';
   completed: boolean;
   dueDate: string;
@@ -23,8 +23,6 @@ export interface DailyStats {
   studyMinutes: number;
   socialMinutes: number;
   focusScore: number;
-  xp: number;
-  level: number;
   breakdown?: {
     studyPoints: number;
     taskPoints: number;

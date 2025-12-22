@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { 
   CheckCircle2, Circle, Calendar, ListTree, MoreHorizontal,
-  BookOpen, User, Briefcase, Heart, Layers
+  BookOpen, User, Briefcase, Heart, Layers, Clock
 } from 'lucide-react';
 import { format, isToday, isTomorrow, isPast, isValid } from 'date-fns';
 import { Task } from '../types';
@@ -23,7 +22,7 @@ type CategoryKey = 'Study' | 'Personal' | 'Project' | 'Health' | 'Work';
 
 interface CategoryStyle {
   label: string;
-  colors: string; // Tailwind classes for bg/text
+  colors: string; 
   border: string;
   icon: React.ElementType;
 }
@@ -36,7 +35,6 @@ const CATEGORY_CONFIG: Record<CategoryKey | string, CategoryStyle> = {
   Work: { label: 'Work', colors: 'bg-indigo-100 text-indigo-700', border: 'border-indigo-200', icon: Briefcase }
 };
 
-// Helper functions needed for this component
 const parseLocalISO = (dateStr: string) => {
   if (!dateStr) return new Date(NaN);
   const parts = dateStr.split('-');
@@ -44,12 +42,12 @@ const parseLocalISO = (dateStr: string) => {
   return new Date(dateStr);
 };
 
-const getPriorityColor = (priority: string) => {
+const getPriorityStyle = (priority: string) => {
   switch (priority) {
-    case 'High': return 'text-red-500 border-red-500 bg-red-50';
-    case 'Medium': return 'text-orange-500 border-orange-500 bg-orange-50';
-    case 'Low': return 'text-blue-500 border-blue-500 bg-blue-50';
-    default: return 'text-slate-400 border-slate-300 bg-slate-50';
+    case 'High': return 'border-l-4 border-l-red-500 bg-red-50/30';
+    case 'Medium': return 'border-l-4 border-l-orange-400 bg-orange-50/30';
+    case 'Low': return 'border-l-4 border-l-blue-400 bg-blue-50/30';
+    default: return 'border-l-4 border-l-slate-200';
   }
 };
 
@@ -81,50 +79,66 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, onToggle }) => {
     const isOverdue = !task.completed && isPast(parseLocalISO(task.dueDate)) && !isToday(parseLocalISO(task.dueDate));
     const totalSub = task.subtasks?.length || 0;
     const completedSub = task.subtasks?.filter(s => s.completed).length || 0;
+    const subtaskProgress = totalSub > 0 ? (completedSub / totalSub) * 100 : 0;
     
-    // Get Category Config
     const catConfig = CATEGORY_CONFIG[task.category as CategoryKey] || CATEGORY_CONFIG.Personal;
     const CatIcon = catConfig.icon;
 
     return (
         <div 
             onClick={onClick}
-            className="group bg-white p-3 rounded-xl border border-slate-100 shadow-sm hover:shadow-md hover:border-slate-200 transition-all cursor-pointer flex items-center gap-3 mb-2"
+            className={`group p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all cursor-pointer flex flex-col gap-3 mb-3 bg-white dark:bg-slate-900 ${task.completed ? 'opacity-60 bg-slate-50' : getPriorityStyle(task.priority)}`}
         >
-            <button 
-                onClick={(e) => { e.stopPropagation(); onToggle(task.id, e); }}
-                className={`transition-colors active:scale-90 ${getCheckboxColor(task.priority)}`}
-            >
-                {task.completed ? <CheckCircle2 size={22} className="text-slate-400" /> : <Circle size={22} />}
-            </button>
-            <div className="flex-1 min-w-0">
-                <div className="flex justify-between items-start">
-                    <h3 className={`font-medium text-sm text-slate-800 truncate ${task.completed ? 'line-through text-slate-400' : ''}`}>
+            <div className="flex items-center gap-3">
+                <button 
+                    onClick={(e) => { e.stopPropagation(); onToggle(task.id, e); }}
+                    className={`transition-all active:scale-90 flex-shrink-0 ${task.completed ? 'text-slate-400' : getCheckboxColor(task.priority)}`}
+                >
+                    {task.completed ? <CheckCircle2 size={24} fill="currentColor" className="text-emerald-500" /> : <Circle size={24} className="hover:text-primary transition-colors" />}
+                </button>
+                
+                <div className="flex-1 min-w-0">
+                    <h3 className={`font-bold text-sm text-slate-800 dark:text-slate-100 truncate tracking-tight ${task.completed ? 'line-through text-slate-400' : ''}`}>
                         {task.title}
                     </h3>
                 </div>
-                
-                <div className="flex items-center gap-3 mt-1 text-[10px] text-slate-400">
-                    <span className={`px-1.5 py-0.5 rounded border flex items-center gap-1 ${catConfig.colors} bg-opacity-20 border-opacity-50`}>
-                        <CatIcon size={10} />
-                        {task.category}
-                    </span>
-                    <span className={`px-1.5 py-0.5 rounded ${getPriorityColor(task.priority)} bg-opacity-20 border-0`}>
-                        {task.priority}
-                    </span>
-                    <span className={`flex items-center gap-1 ${isOverdue ? 'text-red-500 font-semibold' : ''}`}>
-                        <Calendar size={10} /> {formatDateForDisplay(task.dueDate)}
-                    </span>
-                    {totalSub > 0 && (
-                        <span className="flex items-center gap-1 text-slate-500 font-medium">
-                            <ListTree size={10} /> {completedSub}/{totalSub}
-                        </span>
-                    )}
-                </div>
+
+                <button className="text-slate-300 hover:text-slate-600 dark:hover:text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <MoreHorizontal size={18} />
+                </button>
             </div>
-            <button className="text-slate-300 hover:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity">
-                <MoreHorizontal size={16} />
-            </button>
+            
+            <div className="flex flex-wrap items-center gap-2 px-1">
+                <span className={`px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 ${catConfig.colors} bg-opacity-15`}>
+                    <CatIcon size={12} />
+                    {task.category}
+                </span>
+                
+                <span className={`flex items-center gap-1.5 text-[10px] font-bold ${isOverdue ? 'text-red-500' : 'text-slate-400 dark:text-slate-500'}`}>
+                    <Calendar size={12} className={isOverdue ? "animate-pulse" : ""} /> 
+                    {formatDateForDisplay(task.dueDate)}
+                </span>
+
+                {task.durationMinutes > 0 && (
+                    <span className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 dark:text-slate-500">
+                        <Clock size={12} /> {task.durationMinutes}m
+                    </span>
+                )}
+
+                {totalSub > 0 && (
+                    <div className="flex-1 min-w-[80px] flex items-center gap-2 ml-auto">
+                        <div className="flex-1 h-1 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div 
+                                className="h-full bg-emerald-500 rounded-full transition-all duration-700"
+                                style={{ width: `${subtaskProgress}%` }}
+                            />
+                        </div>
+                        <span className="text-[9px] font-black text-slate-400 tabular-nums">
+                            {completedSub}/{totalSub}
+                        </span>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };
