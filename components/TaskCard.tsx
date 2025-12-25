@@ -1,22 +1,13 @@
+
 import React from 'react';
 import { 
   CheckCircle2, Circle, Calendar, ListTree, MoreHorizontal,
   BookOpen, User, Briefcase, Heart, Layers, Clock
 } from 'lucide-react';
 import { format, isToday, isTomorrow, isPast, isValid } from 'date-fns';
-import { Task } from '../types';
+import { Task, TaskWithDetails, Subtask } from '../types';
 
-// Extended Types and Config needed for this component
-interface Subtask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
-
-export interface TaskWithDetails extends Task {
-  subtasks?: Subtask[];
-  notes?: string;
-}
+// Extended Types and Config moved to types.ts
 
 type CategoryKey = 'Study' | 'Personal' | 'Project' | 'Health' | 'Work';
 

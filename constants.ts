@@ -38,12 +38,16 @@ export const INITIAL_GOALS: UserGoal[] = [
 ];
 
 export const BADGES: Badge[] = [
-  { id: '1', name: 'Early Bird', icon: '🌅', description: 'Start a focus session before 7 AM', unlocked: true, color: 'bg-orange-100' },
-  { id: '2', name: 'Deep Diver', icon: '🌊', description: 'Complete a 2-hour focus session', unlocked: true, color: 'bg-blue-100' },
-  { id: '3', name: 'Pomo King', icon: '🍅', description: 'Complete 10 Pomodoros in a week', unlocked: false, color: 'bg-red-100' },
-  { id: '4', name: 'Social Hermit', icon: '🐌', description: 'Zero social media for 24 hours', unlocked: true, color: 'bg-green-100' },
-  { id: '5', name: 'Task Slayer', icon: '⚔️', description: 'Finish 10 tasks in one day', unlocked: false, color: 'bg-purple-100' },
-  { id: '6', name: 'Zen Master', icon: '🧘', description: 'Use focus sounds for 5 hours', unlocked: false, color: 'bg-indigo-100' },
+  { id: '1', name: 'Mầm Non Tập Trung', icon: '🌱', description: 'Hoàn thành phiên Pomodoro đầu tiên.', unlocked: true, color: 'bg-emerald-100' },
+  { id: '2', name: 'Chuỗi Bất Bại', icon: '🔥', description: 'Duy trì liên tiếp 5 phiên Pomodoro trong một ngày.', unlocked: true, color: 'bg-orange-100' },
+  { id: '3', name: 'Bậc Thầy Thiền Định', icon: '🧘', description: 'Hoàn thành 4 phiên Pomodoro mà không hề chạm vào điện thoại/thoát app.', unlocked: false, color: 'bg-violet-100' },
+  { id: '4', name: 'Cú Đêm Miệt Mài', icon: '🦉', description: 'Hoàn thành ít nhất 2 phiên Pomodoro sau 22h đêm.', unlocked: true, color: 'bg-indigo-100' },
+  { id: '5', name: 'Kỷ Lục Gia', icon: '🏆', description: 'Đạt tổng cộng 100/500/1000 giờ tập trung (Đồng/Bạc/Vàng).', unlocked: false, color: 'bg-amber-100' },
+  { id: '6', name: 'Kẻ Vô Hình', icon: '🚫', description: 'Không mở bất kỳ ứng dụng MXH nào trong suốt 24 giờ.', unlocked: true, color: 'bg-slate-100' },
+  { id: '7', name: 'Thợ Săn Thời Gian', icon: '✂️', description: 'Giảm được 30% thời gian dùng MXH so với trung bình tuần trước.', unlocked: false, color: 'bg-blue-100' },
+  { id: '8', name: 'Đường Dốc An Toàn', icon: '📉', description: 'Duy trì thời gian dùng MXH dưới ngưỡng mục tiêu trong 7 ngày liên tiếp.', unlocked: false, color: 'bg-rose-100' },
+  { id: '9', name: 'Sống "Thật"', icon: '🍃', description: 'Có thời gian dùng MXH ít hơn thời gian làm việc (Pomodoro) trong ngày.', unlocked: true, color: 'bg-teal-100' },
+  { id: '10', name: 'Vòng Lặp Hoàn Hảo', icon: '✨', description: 'Đạt được mục tiêu tập trung liên tục trong 30 ngày.', unlocked: false, color: 'bg-yellow-100' },
 ];
 
 export const QUOTES = [

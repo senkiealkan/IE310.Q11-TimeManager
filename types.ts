@@ -9,6 +9,17 @@ export interface Task {
   durationMinutes: number;
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+export interface TaskWithDetails extends Task {
+  subtasks?: Subtask[];
+  notes?: string;
+}
+
 export interface Badge {
   id: string;
   name: string;
@@ -62,4 +73,10 @@ export interface UserGoal {
   target: number;
   current: number;
   unit: string;
+}
+
+export interface UserProgression {
+  xp: number;
+  level: number;
+  rank: string;
 }

@@ -1,10 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   Settings, Award, ChevronRight, Moon, Sun, 
-  Volume2, Flame, X, Camera, User, Briefcase, Save, Lock
+  Volume2, Flame, X, Camera, User, Briefcase, Save, Lock, LayoutGrid,
+  Clock, Swords, ShieldCheck, Zap, Sparkles
 } from 'lucide-react';
-import { BADGES } from '../constants';
+import { BADGES, WEEKLY_STATS } from '../constants';
+import { Task, AppUsage, UserProgression } from '../types';
 
 interface ProfileViewProps {
   theme: 'light' | 'dark';
@@ -20,12 +22,16 @@ interface ProfileViewProps {
   };
   setProfile: (p: any) => void;
   streak: number;
+  tasks: Task[];
+  usage: AppUsage[];
+  progression: UserProgression;
 }
 
 const ProfileView: React.FC<ProfileViewProps> = ({ 
-  theme, onThemeToggle, focusSound, onSoundChange, profile, setProfile, streak 
+  theme, onThemeToggle, focusSound, onSoundChange, profile, setProfile, streak, tasks, usage, progression
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [showAllBadges, setShowAllBadges] = useState(false);
   const [tempProfile, setTempProfile] = useState(profile);
   const [selectedBadge, setSelectedBadge] = useState<typeof BADGES[0] | null>(null);
 
@@ -37,10 +43,31 @@ const ProfileView: React.FC<ProfileViewProps> = ({
       { id: 'lofi', label: 'Lo-fi' },
   ];
 
+  // Tính toán số liệu trọn đời
+  const lifetimeStats = useMemo(() => {
+    const weeklyFocus = WEEKLY_STATS.reduce((acc, s) => acc + s.studyMinutes, 0);
+    const currentCompleted = tasks.filter(t => t.completed).length;
+    const savedMinutesToday = usage.reduce((acc, app) => acc + Math.max(0, app.limit - app.minutes), 0);
+    
+    return {
+        focusHours: Math.round((weeklyFocus * 4.2) / 60) + Math.floor(progression.xp / 100), // Adjusted to align with XP
+        tasksSlain: currentCompleted + 142, // Mô phỏng lịch sử
+        socialMinutesSaved: savedMinutesToday + 2850 // Mô phỏng lịch sử
+    };
+  }, [tasks, usage, progression.xp]);
+
   const handleSave = () => {
     setProfile(tempProfile);
     setIsEditing(false);
   };
+
+  const nextLevelXp = (progression.level) * 1000;
+  const currentLevelXp = (progression.level - 1) * 1000;
+  const progressPercent = ((progression.xp - currentLevelXp) / (nextLevelXp - currentLevelXp)) * 100;
+
+  // Logic lọc huy hiệu: mặc định chỉ hiện huy hiệu đã đạt được
+  const displayBadges = showAllBadges ? BADGES : BADGES.filter(b => b.unlocked);
+  const unlockedCount = BADGES.filter(b => b.unlocked).length;
 
   return (
     <div className="flex-1 overflow-y-auto no-scrollbar pb-32 px-6 pt-10 bg-[#F8FAFC] dark:bg-slate-950 transition-colors relative">
@@ -69,25 +96,78 @@ const ProfileView: React.FC<ProfileViewProps> = ({
           </div>
           <h2 className="text-2xl font-black dark:text-white">{profile.name}</h2>
           <p className="text-sm text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mt-1">{profile.major}</p>
+      </div>
+
+      {/* Level & Rank System Section */}
+      <div className="mb-10 bg-white dark:bg-slate-900 rounded-[32px] p-6 shadow-sm border border-slate-100 dark:border-slate-800">
+          <div className="flex justify-between items-center mb-4">
+              <div className="flex flex-col">
+                  <div className="flex items-center gap-2 mb-1">
+                      <Sparkles size={16} className="text-amber-500" />
+                      <span className="text-lg font-black dark:text-white leading-none">{progression.rank}</span>
+                  </div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Level {progression.level} Elite</span>
+              </div>
+              <div className="bg-primary/10 px-3 py-1.5 rounded-xl border border-primary/20">
+                  <span className="text-[10px] font-black text-primary uppercase tracking-widest">{progression.xp} Total XP</span>
+              </div>
+          </div>
           
-          <div className="mt-4 inline-flex items-center gap-2 bg-orange-100 dark:bg-orange-900/30 px-4 py-2 rounded-2xl border border-orange-200 dark:border-orange-800/50">
-              <span className="text-xl">🔥</span>
-              <span className="text-sm font-black text-orange-700 dark:text-orange-400">{streak} Day Streak</span>
+          <div className="relative w-full h-4 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner">
+              <div 
+                  className="h-full bg-gradient-to-r from-primary to-violet-400 rounded-full transition-all duration-1000 relative" 
+                  style={{ width: `${progressPercent}%` }}
+              >
+                  <div className="absolute inset-0 bg-white/20 animate-pulse" />
+              </div>
+          </div>
+          <div className="flex justify-between mt-2">
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">LVL {progression.level}</span>
+              <span className="text-[9px] font-black text-primary uppercase tracking-tighter">{nextLevelXp - progression.xp} XP TO NEXT LEVEL</span>
+              <span className="text-[9px] font-black text-slate-400 uppercase tracking-tighter">LVL {progression.level + 1}</span>
+          </div>
+      </div>
+
+      {/* Lifetime Impact Cards */}
+      <div className="mb-10">
+          <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] mb-4 px-1">Lifetime Impact</h3>
+          <div className="grid grid-cols-3 gap-3">
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-[28px] shadow-sm flex flex-col items-center text-center transition-all hover:shadow-md">
+                  <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-xl mb-2 text-violet-600 dark:text-violet-400">
+                      <Clock size={18} />
+                  </div>
+                  <span className="text-xl font-black tracking-tighter leading-none dark:text-white">{lifetimeStats.focusHours}h</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">Focus Time</span>
+              </div>
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-[28px] shadow-sm flex flex-col items-center text-center transition-all hover:shadow-md">
+                  <div className="p-2 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl mb-2 text-emerald-600 dark:text-emerald-400">
+                      <Swords size={18} />
+                  </div>
+                  <span className="text-xl font-black tracking-tighter leading-none dark:text-white">{lifetimeStats.tasksSlain}</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">Tasks Slain</span>
+              </div>
+              <div className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-[28px] shadow-sm flex flex-col items-center text-center transition-all hover:shadow-md">
+                  <div className="p-2 bg-rose-100 dark:bg-rose-900/30 rounded-xl mb-2 text-rose-600 dark:text-rose-400">
+                      <ShieldCheck size={18} />
+                  </div>
+                  <span className="text-xl font-black tracking-tighter leading-none dark:text-white">{Math.round(lifetimeStats.socialMinutesSaved / 60)}h</span>
+                  <span className="text-[8px] font-bold text-slate-400 uppercase mt-1">Time Saved</span>
+              </div>
           </div>
       </div>
 
       {/* Badges / Achievements Section */}
-      <div className="mb-8">
+      <div className="mb-10">
           <div className="flex items-center justify-between mb-4 px-1">
-              <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Achievements</h3>
-              <span className="text-[10px] font-black text-primary uppercase tracking-widest">{BADGES.filter(b => b.unlocked).length}/{BADGES.length} Unlocked</span>
+              <h3 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Huy Hiệu Đã Đạt</h3>
+              <span className="text-[10px] font-black text-primary uppercase tracking-widest">{unlockedCount}/{BADGES.length}</span>
           </div>
           <div className="grid grid-cols-3 gap-3">
-              {BADGES.map((badge) => (
+              {displayBadges.map((badge) => (
                   <button 
                     key={badge.id}
                     onClick={() => setSelectedBadge(badge)}
-                    className={`relative flex flex-col items-center p-3 rounded-[28px] transition-all active:scale-95 ${
+                    className={`relative flex flex-col items-center p-3 rounded-[28px] transition-all active:scale-95 animate-in zoom-in-95 duration-200 ${
                         badge.unlocked 
                         ? `${badge.color} dark:bg-opacity-20 shadow-sm border border-white dark:border-slate-800` 
                         : 'bg-slate-100 dark:bg-slate-900 border border-dashed border-slate-200 dark:border-slate-800 opacity-60'
@@ -104,7 +184,26 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                       )}
                   </button>
               ))}
+              
+              {!showAllBadges && unlockedCount < BADGES.length && (
+                  <button 
+                    onClick={() => setShowAllBadges(true)}
+                    className="flex flex-col items-center justify-center p-3 rounded-[28px] bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-400 hover:text-primary transition-all active:scale-95"
+                  >
+                      <LayoutGrid size={24} className="mb-1" />
+                      <span className="text-[9px] font-black uppercase tracking-tighter">See All</span>
+                  </button>
+              )}
           </div>
+          
+          {showAllBadges && (
+              <button 
+                onClick={() => setShowAllBadges(false)}
+                className="mt-4 w-full py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              >
+                  Thu gọn danh sách
+              </button>
+          )}
       </div>
 
       {/* Settings Sections */}
@@ -158,7 +257,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
       {selectedBadge && (
           <div className="absolute inset-0 z-[120] bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-6 animate-in fade-in">
               <div className="bg-white dark:bg-slate-900 rounded-[40px] p-8 w-full max-w-xs shadow-2xl text-center animate-in zoom-in-95">
-                  <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl mb-6 ${selectedBadge.color} bg-opacity-30`}>
+                  <div className={`w-20 h-20 mx-auto rounded-full flex items-center justify-center text-4xl mb-6 ${selectedBadge.color} bg-opacity-30 ${!selectedBadge.unlocked && 'grayscale opacity-50'}`}>
                       {selectedBadge.icon}
                   </div>
                   <h3 className="text-xl font-black dark:text-white mb-2">{selectedBadge.name}</h3>
@@ -169,7 +268,7 @@ const ProfileView: React.FC<ProfileViewProps> = ({
                     onClick={() => setSelectedBadge(null)}
                     className="w-full py-4 bg-slate-900 dark:bg-primary text-white font-black rounded-2xl uppercase tracking-widest text-xs"
                   >
-                      Close Intel
+                      {selectedBadge.unlocked ? 'Tuyệt vời!' : 'Cố gắng lên!'}
                   </button>
               </div>
           </div>

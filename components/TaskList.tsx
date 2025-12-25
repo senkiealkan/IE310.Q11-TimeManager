@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Plus, Calendar, CheckCircle2, Circle, Tag, 
@@ -8,10 +9,10 @@ import {
 import { 
   format, isToday, isTomorrow, isPast, addDays, isValid, compareAsc
 } from 'date-fns';
-import { Task } from '../types';
+import { Task, TaskWithDetails, Subtask } from '../types';
 import CalendarPicker from './CalendarPicker';
 import CategorySelector from './CategorySelector';
-import TaskCard, { TaskWithDetails } from './TaskCard';
+import TaskCard from './TaskCard';
 
 // --- Extended Types & Config ---
 
@@ -57,12 +58,6 @@ const CATEGORY_CONFIG: Record<CategoryKey | string, CategoryStyle> = {
     icon: Briefcase 
   }
 };
-
-interface Subtask {
-  id: string;
-  title: string;
-  completed: boolean;
-}
 
 interface TaskListProps {
   tasks: Task[];
@@ -159,7 +154,6 @@ const TaskList: React.FC<TaskListProps> = ({ tasks: rawTasks, setTasks }) => {
     setTasks(prev => prev.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
 
     if (isCompleting && event) {
-        const rect = (event.target as HTMLElement).getBoundingClientRect();
         const animation: XPAnimation = {
             id: Date.now(),
             x: event.clientX,
@@ -525,204 +519,162 @@ const TaskList: React.FC<TaskListProps> = ({ tasks: rawTasks, setTasks }) => {
                             disabled={!newTaskData.title.trim()}
                             className="px-8 py-3 bg-primary text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-xl shadow-primary/20 hover:scale-105 active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Create
+                            Save Mission
                         </button>
                     </div>
                 </div>
             )}
         </div>
 
-        {/* Task Lists */}
+        {/* Task Groups */}
         <div className="space-y-8">
-            {Object.entries(groupedTasks).map(([groupName, groupTasks]) => groupTasks.length > 0 && (
-                <div key={groupName} className="animate-in slide-in-from-bottom-4 duration-500">
-                     <div className="flex items-center gap-3 mb-5 px-1">
-                        <div className={`w-1.5 h-6 rounded-full ${
-                             groupName === 'Overdue' ? 'bg-red-500' : 
-                             groupName === 'Today' ? 'bg-primary' : 
-                             'bg-slate-300 dark:bg-slate-700'
-                        }`} />
-                        <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500 flex items-center gap-2">
-                           {groupName} 
-                           <span className="bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-md text-[9px]">
-                                {groupTasks.length}
-                           </span>
-                        </h2>
+            {(Object.keys(groupedTasks) as Array<keyof typeof groupedTasks>).map((group) => {
+                const groupTasks = groupedTasks[group];
+                if (groupTasks.length === 0) return null;
+
+                return (
+                    <div key={group} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="flex items-center gap-3 mb-4 px-1">
+                            <h2 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">
+                                {group}
+                            </h2>
+                            <div className="h-px flex-1 bg-slate-100 dark:bg-slate-800/50"></div>
+                            <span className="text-[10px] font-bold text-slate-300 dark:text-slate-600">{groupTasks.length}</span>
+                        </div>
+                        <div className="space-y-3">
+                            {groupTasks.map(task => (
+                                <TaskCard 
+                                    key={task.id} 
+                                    task={task} 
+                                    onClick={() => setEditingTask(task)}
+                                    onToggle={toggleTask}
+                                />
+                            ))}
+                        </div>
                     </div>
-                    {groupTasks.map(task => <TaskCard key={task.id} task={task} onClick={() => setEditingTask(task)} onToggle={toggleTask} />)}
-                </div>
-            ))}
-            
+                );
+            })}
+
             {filteredTasks.length === 0 && (
-                <div className="py-20 text-center flex flex-col items-center animate-in fade-in zoom-in">
-                    <div className="w-24 h-24 bg-slate-50 dark:bg-slate-900 rounded-full flex items-center justify-center mb-6">
-                         <Grid size={40} className="text-slate-200 dark:text-slate-800" />
+                <div className="py-20 text-center flex flex-col items-center">
+                    <div className="w-20 h-20 bg-slate-50 dark:bg-slate-900 rounded-[30px] flex items-center justify-center mb-6 shadow-inner">
+                        <ListTree size={40} className="text-slate-200" />
                     </div>
-                    <h3 className="text-slate-800 dark:text-slate-200 font-black text-lg">Clear Skies!</h3>
-                    <p className="text-slate-400 dark:text-slate-600 text-sm max-w-[200px] mx-auto mt-2">No missions found matching your current view.</p>
+                    <h4 className="text-slate-400 font-black uppercase tracking-widest text-sm">No Missions Found</h4>
+                    <p className="text-slate-300 dark:text-slate-700 text-xs mt-2 max-w-[200px] mx-auto">Try adjusting your search or category filter.</p>
                 </div>
             )}
         </div>
       </div>
 
-      {/* EDIT MODAL */}
+      {/* Edit Modal */}
       {editingTask && (
-        <div className="absolute inset-0 z-[120] bg-slate-900/30 dark:bg-slate-950/80 backdrop-blur-md flex items-end sm:items-center justify-center sm:p-6 overflow-hidden">
-            <div className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-[40px] p-8 shadow-2xl animate-in slide-in-from-bottom-20 max-h-[90vh] overflow-y-auto no-scrollbar flex flex-col">
+        <div className="fixed inset-0 z-[150] bg-slate-900/60 backdrop-blur-xl flex items-end sm:items-center justify-center p-6 animate-in fade-in duration-300">
+            <div className="bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-[40px] sm:rounded-[40px] p-8 shadow-2xl animate-in slide-in-from-bottom-10 flex flex-col max-h-[90vh]">
                 <div className="flex justify-between items-center mb-8 shrink-0">
-                    <h3 className="font-black text-2xl text-slate-800 dark:text-white">Mission Intel</h3>
-                    <button onClick={() => setEditingTask(null)} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl hover:scale-90 transition-transform">
-                        <X size={20} className="text-slate-800 dark:text-white" />
+                    <h3 className="font-black text-2xl dark:text-white">Edit Mission</h3>
+                    <button 
+                        onClick={() => setEditingTask(null)} 
+                        className="p-3 bg-slate-50 dark:bg-slate-800 rounded-2xl text-slate-500"
+                    >
+                        <X size={20} />
                     </button>
                 </div>
 
-                <div className="space-y-8 flex-1">
-                    {/* Title Input */}
-                    <input 
-                        type="text" 
-                        className="w-full text-2xl font-black bg-transparent outline-none border-b-2 border-slate-100 dark:border-slate-800 focus:border-primary py-2 text-slate-800 dark:text-white transition-colors"
-                        value={editingTask.title}
-                        onChange={(e) => setEditingTask({ ...editingTask, title: e.target.value })}
-                    />
-
-                    {/* Meta Controls (Priority, Category, Due Date) */}
-                    <div className="flex gap-3">
-                         <div className="flex-1">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 block">Priority</label>
-                            <button 
-                                onClick={() => setEditingTask(prev => prev ? ({ ...prev, priority: prev.priority === 'High' ? 'Low' : prev.priority === 'Medium' ? 'High' : 'Medium' }) : null)}
-                                className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-colors ${
-                                    editingTask.priority === 'High' ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900 text-red-500 dark:text-red-400' :
-                                    editingTask.priority === 'Medium' ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-100 dark:border-orange-900 text-orange-500 dark:text-orange-400' :
-                                    'bg-blue-50 dark:bg-blue-900/20 border-blue-100 dark:border-blue-900 text-blue-500 dark:text-blue-400'
-                                }`}
-                            >
-                                <Flag size={12} fill="currentColor" />
-                                {editingTask.priority}
-                            </button>
-                         </div>
-
-                         {/* Integrated Category Selector */}
-                         <div className="flex-1">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 block">Category</label>
-                            <div className="w-full">
-                                <CategorySelector 
-                                    selectedCategory={editingTask.category}
-                                    onSelect={(cat) => setEditingTask({ ...editingTask, category: cat as any })}
-                                />
-                                <style>{`.w-48 { width: 100% !important; min-width: 140px; }`}</style>
-                            </div>
-                         </div>
-                    </div>
-                    
+                <div className="flex-1 overflow-y-auto no-scrollbar space-y-6">
                     <div>
-                         <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 block">Deadline</label>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Title</label>
+                        <input 
+                            type="text" 
+                            value={editingTask.title} 
+                            onChange={(e) => setEditingTask({...editingTask, title: e.target.value})}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl px-4 py-4 text-sm font-bold outline-none focus:border-primary transition-all dark:text-white"
+                        />
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3">
                          <button 
-                            onClick={() => setIsEditCalendarOpen(!isEditCalendarOpen)}
-                            className={`w-full flex items-center justify-center gap-2 py-3 rounded-xl border text-[10px] font-black uppercase tracking-wider transition-colors truncate ${isEditCalendarOpen ? 'border-primary bg-purple-50 dark:bg-purple-900/20 text-primary dark:text-purple-300' : 'border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300'}`}
+                            onClick={() => setEditingTask({...editingTask, priority: editingTask.priority === 'High' ? 'Low' : editingTask.priority === 'Medium' ? 'High' : 'Medium'})}
+                            className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-colors ${
+                                editingTask.priority === 'High' ? 'bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 border-red-100 dark:border-red-900' :
+                                editingTask.priority === 'Medium' ? 'bg-orange-50 dark:bg-orange-900/20 text-orange-500 dark:text-orange-400 border-orange-100 dark:border-orange-900' :
+                                'bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 border-blue-100 dark:border-blue-900'
+                            }`}
                         >
+                            <Flag size={12} fill="currentColor" />
+                            {editingTask.priority}
+                        </button>
+
+                        <CategorySelector 
+                            selectedCategory={editingTask.category}
+                            onSelect={(cat) => setEditingTask({...editingTask, category: cat as any})}
+                        />
+
+                        <button 
+                            onClick={() => setIsEditCalendarOpen(!isEditCalendarOpen)}
+                            className={`px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-2 border border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 dark:text-slate-300`}
+                        >
+                            <Calendar size={12} />
                             {formatDateForDisplay(editingTask.dueDate)}
                         </button>
-                        {/* Calendar Dropdown */}
-                        {isEditCalendarOpen && (
-                            <div className="mt-4">
-                                <CalendarPicker 
-                                    selectedDateStr={editingTask.dueDate}
-                                    onSelect={(d) => { setEditingTask({ ...editingTask, dueDate: d }); setIsEditCalendarOpen(false); }}
-                                />
-                            </div>
-                        )}
                     </div>
 
-                    {/* Subtasks Section */}
-                    <div>
-                        <div className="flex justify-between items-end mb-3">
-                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
-                                <ListTree size={14} /> Sub-missions
-                            </label>
-                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-600">
-                                {editingTask.subtasks?.filter(s => s.completed).length || 0} / {editingTask.subtasks?.length || 0}
-                            </span>
-                        </div>
-                        
-                        {(editingTask.subtasks?.length || 0) > 0 && (
-                            <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-4">
-                                <div 
-                                    className="h-full bg-primary transition-all duration-300"
-                                    style={{ width: `${((editingTask.subtasks?.filter(s => s.completed).length || 0) / (editingTask.subtasks?.length || 1)) * 100}%` }}
-                                />
-                            </div>
-                        )}
+                    {isEditCalendarOpen && (
+                        <CalendarPicker 
+                            selectedDateStr={editingTask.dueDate}
+                            onSelect={(d) => { setEditingTask({...editingTask, dueDate: d}); setIsEditCalendarOpen(false); }}
+                        />
+                    )}
 
-                        <div className="space-y-3 mb-4">
-                            {editingTask.subtasks?.map(sub => (
-                                <div key={sub.id} className="flex items-center gap-3 group">
-                                    <button 
-                                        onClick={() => toggleSubtaskEdit(sub.id)}
-                                        className={`transition-colors ${sub.completed ? 'text-emerald-500' : 'text-slate-300 dark:text-slate-600 hover:text-emerald-500'}`}
-                                    >
-                                        {sub.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Notes</label>
+                        <textarea 
+                            value={editingTask.notes || ''} 
+                            onChange={(e) => setEditingTask({...editingTask, notes: e.target.value})}
+                            className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl px-4 py-4 text-sm font-medium outline-none focus:border-primary transition-all dark:text-white resize-none h-32"
+                            placeholder="Add mission intelligence..."
+                        />
+                    </div>
+
+                    <div>
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Sub-missions</label>
+                        <div className="space-y-2 mb-4">
+                            {editingTask.subtasks?.map(st => (
+                                <div key={st.id} className="flex items-center gap-3 bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-2xl border border-slate-100 dark:border-slate-700">
+                                    <button onClick={() => toggleSubtaskEdit(st.id)}>
+                                        {st.completed ? <CheckCircle2 size={18} className="text-emerald-500" /> : <Circle size={18} className="text-slate-300" />}
                                     </button>
-                                    <span className={`text-sm font-medium flex-1 ${sub.completed ? 'text-slate-400 dark:text-slate-600 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
-                                        {sub.title}
-                                    </span>
-                                    <button onClick={() => deleteSubtaskEdit(sub.id)} className="text-slate-300 dark:text-slate-600 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <X size={16} />
-                                    </button>
+                                    <span className={`flex-1 text-xs font-bold ${st.completed ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-200'}`}>{st.title}</span>
+                                    <button onClick={() => deleteSubtaskEdit(st.id)} className="text-slate-300 hover:text-red-400"><Trash2 size={16} /></button>
                                 </div>
                             ))}
                         </div>
-
                         <div className="flex gap-2">
-                            <CornerDownRight size={16} className="text-slate-300 dark:text-slate-600 mt-3" />
-                            <div className="relative flex-1">
-                                <input 
-                                    type="text" 
-                                    placeholder="Add step..." 
-                                    className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl text-sm font-medium outline-none focus:border-primary dark:text-white"
-                                    value={newSubtaskTitle}
-                                    onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                                    onKeyDown={(e) => e.key === 'Enter' && addSubtaskEdit()}
-                                />
-                                <button 
-                                    onClick={addSubtaskEdit}
-                                    disabled={!newSubtaskTitle.trim()}
-                                    className="absolute right-2 top-2 p-1 bg-slate-200 dark:bg-slate-700 rounded-lg hover:bg-primary hover:text-white transition-colors disabled:opacity-50"
-                                >
-                                    <Plus size={16} />
-                                </button>
-                            </div>
+                            <input 
+                                type="text" 
+                                placeholder="New sub-mission..."
+                                value={newSubtaskTitle}
+                                onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && addSubtaskEdit()}
+                                className="flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-xs font-medium outline-none focus:border-primary dark:text-white"
+                            />
+                            <button onClick={addSubtaskEdit} className="bg-primary text-white p-2 rounded-xl"><Plus size={18} /></button>
                         </div>
-                    </div>
-
-                    {/* Notes Section */}
-                    <div>
-                        <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                            <FileText size={14} /> Briefing Notes
-                        </label>
-                        <textarea 
-                            className="w-full p-4 bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-2xl text-sm font-medium outline-none focus:border-primary resize-none h-32 text-slate-700 dark:text-slate-300 leading-relaxed"
-                            placeholder="Add details, links, or thoughts here..."
-                            value={editingTask.notes || ''}
-                            onChange={(e) => setEditingTask({ ...editingTask, notes: e.target.value })}
-                        />
                     </div>
                 </div>
 
-                {/* Footer Controls */}
-                <div className="pt-6 flex gap-4 shrink-0 mt-2">
-                        <button 
+                <div className="pt-6 shrink-0 flex gap-3">
+                    <button 
                         onClick={() => deleteTask(editingTask.id)}
-                        className="p-5 rounded-3xl bg-red-50 dark:bg-red-900/20 text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                        className="flex-1 py-4 bg-red-50 text-red-500 font-black rounded-3xl text-[10px] uppercase tracking-widest active:scale-95 transition-all"
                     >
-                        <Trash2 size={24} />
+                        Terminate
                     </button>
                     <button 
                         onClick={handleSaveEdit}
-                        className="flex-1 bg-slate-900 dark:bg-primary text-white font-black rounded-3xl shadow-xl shadow-slate-900/20 dark:shadow-primary/30 active:scale-95 transition-transform flex items-center justify-center gap-2"
+                        className="flex-1 py-4 bg-slate-900 dark:bg-primary text-white font-black rounded-3xl text-[10px] uppercase tracking-widest shadow-xl active:scale-95 transition-all"
                     >
-                        <Save size={20} />
-                        SAVE CHANGES
+                        Save Intelligence
                     </button>
                 </div>
             </div>
